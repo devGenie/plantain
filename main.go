@@ -47,14 +47,9 @@ func main() {
 		return
 	}
 
-	pln, err := tf.ShowPlanFile(context.Background(), *planFile)
-	if err != nil {
-		log.Fatalf("Error reading plan: %s", err)
-	}
-
-	planIngester, err := parser.NewParser()
+	planIngester, err := parser.NewParser(tf)
 	if err != nil {
 		log.Fatalf("Error initiating parser: %s", err)
 	}
-	planIngester.Parse(*pln)
+	planIngester.Parse(*planFile)
 }
