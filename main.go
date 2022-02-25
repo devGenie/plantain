@@ -51,5 +51,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error initiating parser: %s", err)
 	}
-	planIngester.Parse(*planFile)
+
+	err = planIngester.Parse(*planFile)
+	if err != nil {
+		log.Fatalf("Error parsing plan: %s", err)
+	}
 }

@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/devgenie/plantain/internal/storage"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/hashicorp/terraform-exec/tfexec"
 	tfjson "github.com/hashicorp/terraform-json"
 )
@@ -24,7 +25,6 @@ func NewParser(tf *tfexec.Terraform) (*Parser, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	parser := new(Parser)
 	parser.db = new(storage.BadgerDB)
@@ -50,10 +50,17 @@ func (parser *Parser) Parse(planFilePath string) error {
 	checksum := hex.EncodeToString(sha256Hash)
 	log.Println("Plan file checksum", checksum)
 
-	pln, err := parser.tf.ShowPlanFile(context.Background(), planFilePath)
-	if err != nil {
+	badgerData, err := parser.db.Read(checksum)
+	if err == badger.ErrKeyNotFound {
+		pln, err := parser.tf.ShowPlanFile(context.Background(), planFilePath)
+		if err != nil {
+			return err
+		}
+		parser.db.Write(checksum, *pln)
+	} else if err != nil {
 		return err
 	}
-	log.Println(pln.FormatVersion)
+
+	log.Println("data", badgerData.FormatVersion)
 	return nil
 }
