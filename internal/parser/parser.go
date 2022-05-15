@@ -15,9 +15,13 @@ import (
 )
 
 type Parser struct {
-	Plan tfjson.Plan
-	db   *storage.BadgerDB
-	tf   *tfexec.Terraform
+	plan      tfjson.Plan
+	db        *storage.BadgerDB
+	tf        *tfexec.Terraform
+	toDelete  []*tfjson.ResourceChange
+	toCreate  []*tfjson.ResourceChange
+	toReplace []*tfjson.ResourceChange
+	toUpdate  []*tfjson.ResourceChange
 }
 
 func NewParser(tf *tfexec.Terraform) (*Parser, error) {
@@ -61,6 +65,27 @@ func (parser *Parser) Parse(planFilePath string) error {
 		return err
 	}
 
-	log.Println("data", badgerData.FormatVersion)
+	parser.plan = *badgerData
+	parser.serialize(&parser.plan)
 	return nil
+}
+
+func (parser *Parser) serialize(plan *tfjson.Plan) {
+	log.Printf("Serializing %d resources \n", len(plan.ResourceChanges))
+	for i := 0; i < len(plan.ResourceChanges); i++ {
+		resource := plan.ResourceChanges[i]
+		log.Println("serializing:", resource.Address)
+		actions := resource.Change.Actions
+		switch {
+		case actions.Create():
+			parser.toCreate = append(parser.toCreate, resource)
+		case actions.Delete():
+			parser.toDelete = append(parser.toDelete, resource)
+		case actions.Replace():
+			parser.toReplace = append(parser.toReplace, resource)
+		case actions.Update():
+			parser.toUpdate = append(parser.toUpdate, resource)
+		}
+	}
+	log.Printf("Successfully serialized %d resource(s) \n", len(plan.ResourceChanges))
 }
