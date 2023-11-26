@@ -60,7 +60,14 @@ func (parser *Parser) Parse(planFilePath string) error {
 		if err != nil {
 			return err
 		}
-		parser.db.Write(checksum, *pln)
+		err = parser.db.Write(checksum, *pln)
+		if err != nil {
+			return err
+		}
+		badgerData, err = parser.db.Read(checksum)
+		if err != nil {
+			return err
+		}
 	} else if err != nil {
 		return err
 	}
